@@ -26,6 +26,9 @@ var _heightStrength := 0.0
 # NO_SCOPE_ZOOM when the camera is not (or no longer) zoomed by a scope.
 const NO_SCOPE_ZOOM := 180.0
 var _scopeZoomFov := NO_SCOPE_ZOOM
+# PIP scope camera whose FOV was compensated this frame, and its vanilla FOV.
+var _pipCamera: Camera3D
+var _pipCameraVanillaFov := 0.0
 
 # The bullet and wall-collision raycasts are children of the weapon rig, so the
 # modified transform must only exist while rendering. Game logic and physics
@@ -39,6 +42,10 @@ func _restore_vanilla_transform() -> void:
 	if is_instance_valid(_weaponRigRoot):
 		_weaponRigRoot.scale = Vector3.ONE
 		_weaponRigRoot.position = Vector3.ZERO
+	# Variable scopes lerp from the scope camera's current FOV, so the game must see the vanilla value.
+	if is_instance_valid(_pipCamera):
+		_pipCamera.fov = _pipCameraVanillaFov
+	_pipCamera = null
 
 func _process(delta: float) -> void:
 	if !is_instance_valid(_weaponRigRoot):
@@ -65,6 +72,32 @@ func _process(delta: float) -> void:
 
 	_weaponRigRoot.scale = Vector3(1.0, 1.0, depthScale)
 	_weaponRigRoot.position = Vector3(0.0, verticalOffsetMeters, 0.0)
+	_compensate_pip_magnification(depthScale)
+
+# The PIP image is a texture on the lens mesh, so it is only as large on screen as the
+# lens. The depth scale makes the lens 1 / depthScale times as large as vanilla, while
+# the reticle (drawn in view space) is unaffected. Change the scope camera FOV by the
+# same factor so the image in the scope has exactly the vanilla magnification.
+func _compensate_pip_magnification(depthScale: float) -> void:
+	if !gameData.PIP or is_equal_approx(depthScale, 1.0):
+		return
+	var pipCamera := _get_pip_camera()
+	if pipCamera == null:
+		return
+	_pipCamera = pipCamera
+	_pipCameraVanillaFov = pipCamera.fov
+	var vanillaHalfFovRadians := deg_to_rad(pipCamera.fov) * 0.5
+	pipCamera.fov = rad_to_deg(2.0 * atan(tan(vanillaHalfFovRadians) / depthScale))
+
+func _get_pip_camera() -> Camera3D:
+	var rigCount := _weaponRigRoot.get_child_count()
+	if rigCount == 0:
+		return null
+	# The game treats the last child as the current rig (RigManager.UpdateRig).
+	var optic = _weaponRigRoot.get_child(rigCount - 1).get("activeOptic")
+	if !is_instance_valid(optic):
+		return null
+	return optic.get("camera") as Camera3D
 
 # Shared conditions where the weapon must look vanilla.
 func _is_blocked() -> bool:
@@ -95,9 +128,11 @@ func _should_keep_fov_in_pip_scope() -> bool:
 	return settings.preserve_fov_when_aiming and gameData.PIP
 
 # True while the camera is zoomed by a scope or still zooming back out from one.
+# The depth scale then uses the base FOV as reference, so the weapon zooms in
+# together with the camera exactly like vanilla.
 func _is_scope_zoom_active(liveCameraFov: float) -> bool:
-	# PIP with preserved FOV: treat the camera zoom like any other FOV change, so the
-	# depth scale follows the live FOV and the weapon does not zoom in with the camera.
+	# PIP with preserved FOV: follow the live camera FOV so the weapon does not zoom in
+	# with the camera. The smaller lens is compensated in _compensate_pip_magnification.
 	if gameData.isScoped and !_should_keep_fov_in_pip_scope():
 		_scopeZoomFov = gameData.aimFOV
 	if _scopeZoomFov >= gameData.baseFOV - 0.01:
