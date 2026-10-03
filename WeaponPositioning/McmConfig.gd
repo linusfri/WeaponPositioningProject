@@ -25,7 +25,7 @@ func _ready():
 		.setMenuPos(2) \
 		.setOnValueChanged("OnValueChanged")
 
-	_mcmConfig.CreateBoolValue("PreserveFovWhenAiming", "Keep viewmodel FOV when aiming", "Keep the weapon distance from the viewmodel FOV while aiming down sights (iron sights, red dots, canted). Magnified scopes and the vertical offset always use the vanilla view.", false) \
+	_mcmConfig.CreateBoolValue("PreserveFovWhenAiming", "Keep viewmodel FOV when aiming", "Keep the weapon distance from the viewmodel FOV while aiming down sights (iron sights, red dots, canted, PIP scopes). Non-PIP scopes and the vertical offset always use the vanilla view.", false) \
 		.setMenuPos(3) \
 		.setOnValueChanged("OnValueChanged")
 

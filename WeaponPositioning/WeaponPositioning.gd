@@ -84,15 +84,21 @@ func _should_apply_fov() -> bool:
 	# Sights lie on the screen center axis, which the depth scale leaves untouched,
 	# so keeping the FOV while aiming does not break sight alignment.
 	if _is_aiming():
-		# Scopes zoom the camera; fade to vanilla together with the ADS weapon motion.
-		if gameData.isScoped:
+		# Non-PIP scopes zoom the camera heavily; fade to vanilla together with the
+		# ADS weapon motion. PIP scopes magnify inside the lens, so the FOV can stay.
+		if gameData.isScoped and !_should_keep_fov_in_pip_scope():
 			return false
 		return settings.preserve_fov_when_aiming
 	return true
 
+func _should_keep_fov_in_pip_scope() -> bool:
+	return settings.preserve_fov_when_aiming and gameData.PIP
+
 # True while the camera is zoomed by a scope or still zooming back out from one.
 func _is_scope_zoom_active(liveCameraFov: float) -> bool:
-	if gameData.isScoped:
+	# PIP with preserved FOV: treat the camera zoom like any other FOV change, so the
+	# depth scale follows the live FOV and the weapon does not zoom in with the camera.
+	if gameData.isScoped and !_should_keep_fov_in_pip_scope():
 		_scopeZoomFov = gameData.aimFOV
 	if _scopeZoomFov >= gameData.baseFOV - 0.01:
 		return false
