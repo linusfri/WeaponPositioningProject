@@ -1,0 +1,8 @@
+[mod]
+name="Weapon Positioning"
+id="weapon_positioning"
+version="1.0.0"
+
+[autoload]
+WeaponPositioning="res://WeaponPositioning/WeaponPositioning.gd"
+WeaponPositioningMcmConfig="res://WeaponPositioning/McmConfig.gd"
