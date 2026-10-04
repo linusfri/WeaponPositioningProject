@@ -34,7 +34,7 @@ var _pipCameraVanillaFov := 0.0
 # modified transform must only exist while rendering. Game logic and physics
 # always see the vanilla transform; it is swapped in again at the end of _process.
 func _ready() -> void:
-	process_priority = 1000 # run after every game script
+	process_priority = 1000 # run after every game script. A little brittle, but will do for now.
 	get_tree().physics_frame.connect(_restore_vanilla_transform)
 	get_tree().process_frame.connect(_restore_vanilla_transform)
 
